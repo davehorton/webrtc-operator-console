@@ -1,0 +1,108 @@
+
+<link rel="import" href="../bower_components/polymerfire/firebase-app.html">
+<link rel="import" href="../bower_components/polymerfire/firebase-auth.html">
+<link rel="import" href="../bower_components/neon-animation/animations/scale-up-animation.html">
+<link rel="import" href="../bower_components/neon-animation/animations/fade-out-animation.html">
+<link rel="import" href="../bower_components/paper-dialog/paper-dialog.html">
+<link rel="import" href="../bower_components/paper-dialog-behavior/paper-dialog-shared-styles.html">
+
+<dom-module id="my-auth">
+    <template>
+        <style include="paper-dialog-shared-styles">
+        paper-dialog {
+            padding: 32px;
+        }
+
+        .google-sign-in {
+            display: inline-block;
+            background: #4285f4;
+            color: white;
+            width: 190px;
+            border-radius: 5px;
+            white-space: nowrap;
+        }
+
+        .google-sign-in:hover {
+            cursor: pointer;
+        }
+
+        .google-sign-in-icon {
+            background: url('/images/google-sign-in/g-normal.png') transparent 5px 50% no-repeat;
+            display: inline-block;
+            vertical-align: middle;
+            width: 42px;
+            height: 42px;
+            border-right: #2265d4 1px solid;
+        }
+
+        .google-sign-in-label {
+            display: inline-block;
+            vertical-align: middle;
+            padding-left: 42px;
+            padding-right: 42px;
+            font-size: 14px;
+            font-weight: bold;
+            /* Use the Roboto font that is loaded in the <head> */
+            font-family: 'Roboto', sans-serif;
+        }
+        </style>
+
+        <firebase-app
+            name="wsdemo"
+            auth-domain="ws-demo-97a93.firebaseapp.com"
+            database-url="https://ws-demo-97a93.firebaseio.com"
+            api-key="AIzaSyBEYrIzVERG6-KfkepmC4I9RbAFD1u4A18">
+        </firebase-app>
+
+        <firebase-auth
+            id="authenticate"
+            app-name="wsdemo"
+            user="{{user}}"
+            provider="google">
+        </firebase-auth>
+
+        <paper-dialog modal
+                    opened="[[!user]]"
+                    entry-animation="scale-up-animation"
+                    exit-animation="fade-out-animation">
+            <h2>Please sign in.</h2>
+            <div>
+                <div class="google-sign-in"
+                    tabindex="0"
+                    on-tap="signIn">
+                <span class="google-sign-in-icon"></span>
+                <span class="google-sign-in-label">Google</span>
+                </div>
+            </div>
+        </paper-dialog>
+
+    </template>
+
+    <script>
+        Polymer({
+            is: 'my-auth',
+            properties: {
+                user: {
+                    notify: true
+                },
+            },
+
+            signIn: function() {
+              console.log('calling signInWithPopup');
+              try {
+                this.$.authenticate.signInWithPopup('google');
+              }
+              catch( err ) {
+                console.error('Error!!!: %s', JSON.stringify(err)) ;
+              }
+              console.log('back from calling signInWithPopup');
+            },
+
+            signOut: function() {
+              this.$.authenticate.signOut();
+              this.user = null;
+            }
+        });
+
+    </script>
+</dom-module>

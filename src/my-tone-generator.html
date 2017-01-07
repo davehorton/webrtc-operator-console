@@ -1,0 +1,130 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+
+<dom-module id="my-tone-generator">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+
+  </template>
+  <script>
+    Polymer({
+      is: 'my-tone-generator',
+
+      properties: {
+        frequency1: {
+          type: Number,
+          value: 350
+        },
+        frequency2: {
+          type: Number,
+          value: 440,
+        },
+        isActive: {
+          type: Boolean,
+          value: false
+        },
+        _context: {
+          type: Object
+        },
+        _status: {
+          type: Number,
+          value: 0
+        },
+        _osc1: {
+          type: Object
+        },
+        _osc2: {
+          type: Object
+        },
+        _gainNode: {
+          type: Object
+        },
+        _filter: {
+          type: Object
+        },
+        ringerLFOBuffer: {
+          type: Object
+        }
+      },
+
+      startRinging: function(){
+          this._start();
+          // set our gain node to 0, because the LFO is calibrated to this level
+          this._gainNode.gain.value = 0;
+          this._status = 1;
+
+          this._createRingerLFO();
+
+          this._ringerLFOSource = this._context.createBufferSource();
+          this._ringerLFOSource.buffer = this._ringerLFOBuffer;
+          this._ringerLFOSource.loop = true;
+          // connect the ringerLFOSource to the gain Node audio param
+          this._ringerLFOSource.connect(this._gainNode.gain);
+          this._ringerLFOSource.start(0);
+          this.isActive = true ;
+      },
+      stopRinging: function(){
+        this._stop();
+        this._ringerLFOSource.stop(0);
+        this.isActive = false ;
+      },
+      _setup: function() {
+        this._context = new AudioContext();
+
+        this._osc1 = this._context.createOscillator();
+        this._osc2 = this._context.createOscillator();
+        this._osc1.frequency.value = this.frequency1;
+        this._osc2.frequency.value = this.frequency2;
+
+        this._gainNode = this._context.createGain();
+        this._gainNode.gain.value = 0.25;
+
+        this._filter = this._context.createBiquadFilter();
+        this._filter.type = "lowpass";
+        this._filter.frequency = 8000;
+
+        this._osc1.connect(this._gainNode);
+        this._osc2.connect(this._gainNode);
+
+        this._gainNode.connect(this._filter);
+        this._filter.connect(this._context.destination);
+      },
+
+      _start: function() {
+        this._setup();
+        this._osc1.start(0);
+        this._osc2.start(0);
+        this._status = 1;
+      },
+      _stop: function(){
+        this._osc1.stop(0);
+        this._osc2.stop(0);
+        this._status = 0;
+      },
+
+      _createRingerLFO: function() {
+        // Create an empty 3 second mono buffer at the
+        // sample rate of the AudioContext
+        var channels = 1;
+        var sampleRate = this._context.sampleRate;
+        var frameCount = sampleRate * 6;
+        var arrayBuffer = this._context.createBuffer(channels, frameCount, sampleRate);
+
+        // getChannelData allows us to access and edit the buffer data and change.
+        var bufferData = arrayBuffer.getChannelData(0);
+        for (var i = 0; i < frameCount; i++) {
+            // if the sample lies between 0 and 0.4 seconds, or 0.6 and 1 second, we want it to be on.
+            //  if ((i/sampleRate > 0 && i/sampleRate < 0.4) || (i/sampleRate > 0.6 && i/sampleRate < 1.0)){
+            if ( i/sampleRate > 0 && i/sampleRate < 2.0 ){
+                bufferData[i] = 0.25;
+            }
+        }
+
+        this._ringerLFOBuffer = arrayBuffer;
+      }
+    });
+  </script>
+</dom-module>

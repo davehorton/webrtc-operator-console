@@ -1,0 +1,635 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-dialog/paper-dialog.html">
+<link rel="import" href="../bower_components/paper-card/paper-card.html">
+<link rel="import" href="../bower_components/paper-item/paper-item.html">
+<link rel="import" href="../bower_components/paper-item/paper-item-body.html">
+<link rel="import" href="../bower_components/paper-item/paper-icon-item.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/iron-icon/iron-icon.html">
+<link rel="import" href="../bower_components/neon-animation/animations/scale-up-animation.html">
+<link rel="import" href="../bower_components/neon-animation/animations/fade-out-animation.html">
+<link rel="import" href="my-icons.html">
+
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="my-line">
+  <template>
+    <style include="iron-flex iron-flex-alignment">
+      :host {
+        display: block;
+      }
+      .lineStatus {
+        padding: 26px 26px 0 31px;
+        margin-right: 10px;
+      }
+      .idle {
+      	width: 26px;
+      	height: 15px;
+      	opacity: 0.32;
+      	font-size: 12px;
+        text-transform: uppercase;;
+      	font-weight: bold;
+      	font-style: normal;
+      	font-stretch: normal;
+      	text-align: left;
+      	color: #000000;
+      }
+      .spacer {
+        min-height: 78px;
+      }
+      paper-input.dialstring {
+        --paper-input-container-color: rgba(0, 0, 0, 0.32);
+        --paper-input-container-focus-color:  var(--app-primary-color);
+        --paper-input-suffix: {
+          color: var(--app-primary-color);
+        }
+        --paper-input-container-label {
+          top: -11px;
+        }
+      }
+      .call-summary {
+      	font-size: 16px;
+      	font-weight: bold;
+      	font-style: normal;
+      	font-stretch: normal;
+      	line-height: 1.75;
+      	text-align: left;
+      	color: rgba(0, 0, 0, 0.72);
+      }
+      .call-duration {
+        font-family: Lato;
+        	font-size: 14px;
+        	font-weight: normal;
+        	font-style: normal;
+        	font-stretch: normal;
+        	line-height: 1.29;
+        	text-align: left;
+        	color: rgba(0, 0, 0, 0.48);
+      }
+      .controls {
+        margin: 0 20px 0 36px;
+      }
+      .controls paper-icon-button {
+        width: 42px;
+        height: 42px;
+        color: var(--app-primary-color);
+      }
+      .controls paper-icon-button[icon=call-end] {
+        color: var(--app-warning-color);
+      }
+      #xfer {
+        margin: 0;
+        width: 192px;
+        border-radius: 2px;
+      	background-color: #ffffff;
+      	box-shadow: 0 8px 8px 0 rgba(0, 0, 0, 0.24), 0 0 8px 0 rgba(0, 0, 0, 0.12);
+
+        --paper-dialog: {
+            margin: 0;
+        }
+      }
+      #xfer paper-input {
+        margin-top: 0;
+      }
+      #xfer .container {
+        margin: 0;
+        padding: 0;
+      }
+      #xfer paper-listbox {
+        max-height: 170px;
+        overflow: auto;
+        cursor: pointer;
+      }
+      #xfer paper-item {
+        --paper-item-min-height: 34px;
+      }
+      #xfer .extension {
+        width: 100%;
+      	font-family: Lato;
+      	font-size: 14px;
+      	font-weight: normal;
+      	font-style: normal;
+      	font-stretch: normal;
+      	text-align: left;
+      	color: rgba(0, 0, 0, 0.48);
+      }
+      #xfer .extension .label {
+        min-width: 25%;
+      }
+      .search {
+        height: 48px;
+        background-color: rgba(0, 0, 0, 0.08);
+      }
+      .search input {
+      	height: 32px;
+        width: 176px;
+        margin: 8px;
+        padding-left: 4px;
+        border: none;
+      	border-radius: 2px;
+      	background-color: #ffffff;
+        font-family: Lato;
+        font-size: 14px;
+        font-weight: normal;
+        font-style: normal;
+        font-stretch: normal;
+        text-align: left;
+        color: rgba(0, 0, 0, 0.48);
+
+      }
+      .search input::-webkit-input-placeholder,
+      .search input:-moz-placeholder
+      .search input::-moz-placeholder
+      .search input:-ms-input-placeholder
+       {
+        font-family: Lato;
+      	font-size: 14px;
+      	font-weight: normal;
+      	font-style: normal;
+      	font-stretch: normal;
+      	text-align: left;
+        margin-left: 5px;
+      	color: rgba(0, 0, 0, 0.32);
+      }
+
+    </style>
+
+      <!-- remote audio element -->
+      <audio id="audio"></audio>
+
+      <paper-card class="layout horizontal">
+
+        <!-- status icon -->
+        <div class="lineStatus">
+          <template is="dom-if" if="{{isOffline(online)}}" restamp="true">
+            <div class="idle">offline</div>
+          </template>
+          <template is="dom-if" if="{{!isOffline(online)}}" restamp="true">
+
+            <template is="dom-if" if="{{_csIdle(callState)}}" restamp="true">
+                <div class="idle">idle</div>
+            </template>
+
+            <template is="dom-if" if="{{_csDialing(callState)}}" restamp="true">
+              <iron-icon icon="phone-in-talk"></iron-icon>
+            </template>
+
+            <template is="dom-if" if="{{_csRinging(callState)}}" restamp="true">
+              <iron-icon icon="ring-volume"></iron-icon>
+            </template>
+
+            <template is="dom-if" if="{{_csActive(callState)}}" restamp="true">
+              <template is="dom-if" if="{{_csOutbound(callState)}}" restamp="true">
+                <iron-icon icon="call-made"></iron-icon>
+              </template>
+              <template is="dom-if" if="{{!_csOutbound(callState)}}" restamp="true">
+                <iron-icon icon="call-received"></iron-icon>
+              </template>
+            </template>
+
+          </template>
+        </div>
+
+        <!-- next up: either a number input field (when idle) or the status of a call -->
+        <template is="dom-if" if="{{isOffline(online)}}" restamp="true">
+          <div class="spacer">&nbsp;</div>
+        </template>
+        <template is="dom-if" if="{{!isOffline(online)}}" restamp="true">
+          <template is="dom-if" if="{{_csIdle(callState)}}" restamp="true">
+            <paper-input label="Enter a number to call" value="{{dialedDigits}}" on-keydown="_checkForEnter" class="flex dialstring">
+              <paper-icon-button suffix id="dialpad"  icon="dialpad"></paper-icon-button>
+            </paper-input>
+          </template>
+          <template is="dom-if" if="{{!_csIdle(callState)}}" restamp="true">
+            <paper-item-body two-line>
+              <div class="call-summary">{{_getCallDescription(callState)}}</div>
+              <div secondary class="call-duration">{{_activeCallDuration}}</div>
+            </paper-item-body>
+          </template>
+        </template>
+
+        <!-- action buttons: state-dependent -->
+        <div class="controls layout horizontal end-justified center">
+          <template is="dom-if" if="{{isOffline(online)}}" restamp="true">
+            <div class="spacer">&nbsp;</div>
+          </template>
+          <template is="dom-if" if="{{online}}" restamp="true">
+            <template is="dom-if" if="{{_csIdle(callState)}}" restamp="true">
+              <paper-icon-button icon="phone" on-tap="dial"></paper-icon-button>
+              <paper-icon-button icon="videocam"></paper-icon-button>
+            </template>
+            <template is="dom-if" if="{{_csRinging(callState)}}" restamp="true">
+              <paper-icon-button icon="phone" on-tap="answer"></paper-icon-button>
+              <paper-icon-button icon="call-end" on-tap="reject"></paper-icon-button>
+            </template>
+            <template is="dom-if" if="{{_csDialing(callState)}}" restamp="true">
+              <paper-icon-button icon="call-end" on-tap="hangup"></paper-icon-button>
+            </template>
+            <template is="dom-if" if="{{_csActive(callState)}}" restamp="true">
+              <template is="dom-if" if="{{!isMuted(mediaState)}}" restamp="true">
+                <paper-icon-button icon="mic-off" on-tap="toggleMute"></paper-icon-button>
+              </template>
+              <template is="dom-if" if="{{isMuted(mediaState)}}" restamp="true">
+                <paper-icon-button icon="mic" on-tap="toggleMute"></paper-icon-button>
+              </template>
+              <template is="dom-if" if="{{!isOnHold(mediaState)}}" restamp="true">
+                <paper-icon-button icon="pause" on-tap="toggleHold" hidden$="{{isOnHold(mediaState)}}"></paper-icon-button>
+              </template>
+              <template is="dom-if" if="{{isOnHold(mediaState)}}" restamp="true">
+                <paper-icon-button icon="play-arrow" on-tap="toggleHold"  hidden$="{{!isOnHold(mediaState)}}"></paper-icon-button>
+              </template>
+              <paper-icon-button icon="swap-calls" on-tap="transfer"></paper-icon-button>
+              <paper-icon-button icon="call-end" on-tap="hangup"></paper-icon-button>
+            </template>
+          </template>
+        </div>
+      </paper-card>
+
+      <paper-dialog id="xfer" no-overlap horizontal-align="left" vertical-align="top" entry-animation="scale-up-animation" exit-animation="fade-out-animation">
+        <!-- <paper-input autofocus label="Search" value={{_referTo}}></paper-input> -->
+        <div class="layout vertical container">
+          <div class="search">
+            <input type="text" autofocus value="{{_referTo::input}}" on-keydown="_xferCheckForEnter"  placeholder="&nbsp;Search">
+          </div>
+          <paper-listbox>
+            <template is="dom-repeat" items="{{presentities}}">
+              <paper-item on-tap="_xferToExtension">
+                <div class="layout horizontal extension">
+                  <div class="label">{{item.label}}</div>
+                  <div class="descr">{{item.descr}}</div>
+                </div>
+              </paper-item>
+            </template>
+          </paper-listbox>
+        </div>
+      </paper-dialog>
+
+  </template>
+  <script>
+
+  (function() {
+    const CS_IDLE = 'idle' ;
+    const CS_ACTIVE = 'active' ;
+    const CS_RINGING = 'ringing' ;
+    const CS_DIALING = 'dialing' ;
+
+    const MS_NONE = 'none';
+    const MS_SENDRECV = 'sendrecv';
+    const MS_HOLD = 'hold' ;
+    const MS_MUTED = 'muted' ;
+
+    Polymer({
+      is: 'my-line',
+
+      properties: {
+        sipUa: {
+          type: Object,
+          value: null
+        },
+        line: {
+          type: Number
+        },
+        session: {
+          type: Object
+        },
+        online: {
+          type: Boolean
+        },
+        callState: {
+          type: String,
+          reflectToAttribute: true,
+          value: CS_IDLE
+        },
+        mediaState: {
+          type: String,
+          value: MS_NONE
+        },
+        dialedDigits: {
+          type: String,
+          value: ''
+        },
+        presentities: {
+          type: Object
+        },
+        _referTo: {
+          type: String,
+          value: '',
+          notify: true
+        },
+        _activeCallDuration: {
+          type: String,
+          value: ''
+        },
+        occupied: {
+          type: Boolean,
+          computed: '_computeOccupied(callState)'
+        }
+      },
+
+      observers: [
+        '_presentitiesAddedOrRemoved(presentities.splices)'
+      ],
+
+      _presentitiesAddedOrRemoved: function(splices) {
+        console.log('presentitiesAddedOrRemoved: %s', JSON.stringify(splices));
+      },
+      dial: function( tel ) {
+        if( !!this.session || this.callState !== CS_IDLE ) {
+          throw new Error('dial is not valid in state ' + this.callState);
+        }
+        this.session = this.sipUa.invite( typeof tel === 'String' ? tel : this.dialedDigits, {
+          media: {
+            constraints: {
+              audio: true,
+              video: false
+            },
+            render: {
+              remote: this.$.audio
+            }
+          }
+        }) ;
+        this._setCallState( CS_DIALING ) ;
+      },
+      pickupCall: function(obj) {
+        this.session = this.sipUa.invite( '*97' + obj.presentity.deviceId, {
+          media: {
+            constraints: {
+              audio: true,
+              video: false
+            },
+            render: {
+              remote: this.$.audio
+            }
+          }
+        }) ;
+        this.session._callPickup = true ;
+        this.session._callPickupCallerId = obj.remotePartyId;
+        this.session._callPickupCallerNumber = obj.remotePartyNumber;
+        this._setCallState( CS_DIALING ) ;
+      },
+      assign: function(session) {
+        if( !!this.session || this.callState !== CS_IDLE ) {
+          throw new Error('assign is not valid when we already have a session ');
+        }
+        this.session = session ;
+        this._setCallState( CS_RINGING ) ;
+      },
+      answer: function() {
+        this.session.accept({
+          media: {
+            constraints: {
+              audio: true,
+              video: false
+            },
+            render: {
+              remote: this.$.audio
+            }
+          }
+        }) ;
+        this._setCallState(CS_ACTIVE);
+      },
+      reject: function() {
+        this.session.reject({statusCode: 486}) ;
+        this._setCallState(CS_IDLE);
+      },
+      hangup: function() {
+        if( !(this.callState === CS_ACTIVE || this.callState === CS_DIALING) ) {
+          throw new Error('hangup is not valid in state ' + this.callState);
+        }
+        this.session.terminate() ;
+      },
+      toggleHold: function( opts ) {
+        if( this.callState !== CS_ACTIVE ) {
+          throw new Error('toggleHold is not valid in state ' + this.callState);
+        }
+        function succeeded( newState, args ) {
+          console.log('hold/unhold succeded, mediaState now %s', newState) ;
+          this._setMediaState( newState );
+        }
+        if( MS_HOLD === this.mediaState ) {
+          this.session.unhold({
+            eventHandlers: {
+              'succeeded': succeeded.bind(this, MS_SENDRECV)
+            }
+          }) ;
+        }
+        else {
+          this.session.hold({
+            eventHandlers: {
+              'succeeded': succeeded.bind(this, MS_HOLD)
+            }
+          }) ;
+        }
+      },
+      toggleMute: function() {
+        if( this.callState !== CS_ACTIVE ) {
+          throw new Error('toggleHold is not valid in state ' + this.callState);
+        }
+        this.session[ MS_MUTED === this.mediaState ? 'unmute' : 'mute' ]() ;
+      },
+      transfer: function( e ) {
+        this.$.xfer.positionTarget = e.target ;
+        this.$.xfer.open() ;
+      },
+      _doBlindXfer: function(e) {
+        this.session.refer(this._referTo);
+        this._referTo = '' ;
+      },
+
+      _getCallDescription: function( callState ) {
+        var s = '' ;
+        if( !this.session ) {
+          return s ;
+        }
+        var remoteIdentity = this.session.remoteIdentity ;
+
+        // direction
+        if( this.session._outbound === true ) {
+          if( !this.session._connectTime ) {
+            if( this.session._callPickup === true ) {
+              s += 'Picking up call from ';
+            }
+            else {
+              s += 'Dialing ' ;
+            }
+          }
+          else {
+            if( this.session._callPickup === true ) {
+              s += 'Picked up call from ' ;
+            }
+            else {
+              s += 'Outbound call to ' ;
+            }
+          }
+        }
+        else {
+          s += 'Inbound call from ' ;
+        }
+
+        // caller id
+        if( this.session._callPickup === true ) {
+          s += '"' + this.session._callPickupCallerId + '" ';
+          s += this.session._callPickupCallerNumber;
+        }
+        else {
+          if( !this.session._outbound ) {
+            if( remoteIdentity.displayName ) {
+              s += '"' + remoteIdentity.displayName + '" ';
+            }
+          }
+
+          // phone number or extension
+          if( remoteIdentity.uri ) {
+            s += remoteIdentity.uri.user ;
+          }
+        }
+
+        return s ;
+      },
+      _csIdle: function(callState) { return CS_IDLE === callState ;},
+      _csRinging: function(callState) { return CS_RINGING === callState ;},
+      _csDialing: function(callState) { return CS_DIALING === callState ;},
+      _csActive: function(callState) { return CS_ACTIVE === callState ;},
+      _csOutbound: function(callState) { return CS_ACTIVE === callState && this.session._outbound === true;},
+
+      isOffline: function(online) { return !online; },
+
+      isMuted: function(mediaState) { return MS_MUTED === mediaState;},
+      isOnHold: function(mediaState) { return MS_HOLD === mediaState;},
+
+      _computeOccupied: function(callState) { return this.callState !== CS_IDLE;},
+
+      _startCallTimer: function() {
+        this.session._connectTime = new Date() ;
+        this._activeCallDuration = '0:00' ;
+        this._timerId = setInterval( this._calculateCallDuration.bind(this), 1000) ;
+      },
+      _stopCallTimer: function() {
+        clearInterval( this._timerId ) ;
+        this._timerId = null ;
+        this._activeCallDuration = '' ;
+
+      },
+      _calculateCallDuration: function() {
+        var now = new Date() ;
+        var secs = Math.floor( ( now.getTime() - this.session._connectTime.getTime() ) / 1000 ) ;
+        var mins = Math.floor( secs / 60 ) ;
+        secs = secs % 60 ;
+        if( secs < 10 ) { secs = '0' + secs; }
+        this._activeCallDuration = '' + mins + ':' + secs  ;
+      },
+      _checkForEnter: function(e) {
+        console.log('checkForEnter keycode: %d', e.keyCode) ;
+        if( e.keyCode === 13 && this.dialedDigits && this.dialedDigits.length > 2 ) {
+          this.dial() ;
+        }
+      },
+      _xferCheckForEnter: function(e) {
+        if( e.keyCode === 13 ) {
+          console.log('transferring to %s', this._referTo) ;
+          this.$.xfer.close() ;
+          this._doBlindXfer() ;
+        }
+      },
+      _xferToExtension: function(e) {
+        console.log('transfer to extension: %s', JSON.stringify(e.model.get('item.label'))) ;
+        this._referTo = e.model.get('item.label');
+        this.$.xfer.close() ;
+        this._doBlindXfer() ;
+      },
+
+      // client context event handlers
+
+      _onProgress: function(session, response, cause) {
+        //console.log('progress %s:%s', JSON.stringify(response), JSON.stringify(cause)) ;
+        //TODO: update display to 'Ringing' if 18x === response.status_code
+      },
+      _onAccepted: function(session, response, cause) {
+        this._setCallState(CS_ACTIVE);
+      },
+      _onRejected: function(session, response, cause) {
+        //console.log('progress %s:%s',  JSON.stringify(response), JSON.stringify(cause)) ;
+        //TODO: show rejection reason in display based on cause
+        this._setCallState(CS_IDLE);
+      },
+
+      // active session event handlers
+
+      _onBye: function( session, message, cause) {
+        //TODO: update status, stop clock etc..
+        this._setCallState(CS_IDLE);
+      },
+      _onMuteStateChange: function(muted) {
+        this._setMediaState (muted ? MS_MUTED : MS_SENDRECV) ;
+      },
+
+      _setCallState: function(newState) {
+        //console.log('line %d: %s => %s', this.line, this.callState, newState);
+        var oldState = this.callState ;
+
+        if( this.callState === newState ) {
+          throw new Error('changing state to same value');
+        }
+        switch(newState) {
+          case CS_IDLE:
+            this._stopCallTimer() ;
+            this.session = null ;
+            this.sessionOpts = null ;
+            this._setMediaState( MS_NONE );
+            break ;
+
+          case CS_RINGING:
+            this.session._outbound = false ;
+            this.session._startTime = new Date() ;
+          break ;
+
+          case CS_DIALING:
+            this.session._outbound = true ;
+            this.session._startTime = new Date() ;
+            this.session.on('progress', this._onProgress.bind(this, this.session)) ;
+            this.session.once('accepted', this._onAccepted.bind(this, this.session)) ;
+            this.session.once('rejected', this._onRejected.bind(this, this.session)) ;
+            break ;
+
+          case CS_ACTIVE:
+            this._startCallTimer() ;
+            this.dialedDigits = '';
+            this.session.once('bye', this._onBye.bind(this)) ;
+            this.session.on('muted', this._onMuteStateChange.bind(this, true)) ;
+            this.session.on('unmuted', this._onMuteStateChange.bind(this, false)) ;
+            this._setMediaState( MS_SENDRECV ) ;
+
+            break ;
+        }
+        this.callState = newState ;
+        this.fire('state-change', {
+          line: this.line,
+          newState: this.callState,
+          oldState: oldState
+        });
+      },
+      _setMediaState: function(newState) {
+        //console.log('line %d: %s => %s', this.line, this.mediaState, newState);
+        switch(newState) {
+          case MS_NONE:
+          break ;
+
+          case MS_SENDRECV:
+          break ;
+
+          case MS_HOLD:
+          break ;
+
+          case MS_MUTED:
+          break ;
+        }
+        this.mediaState = newState;
+      }
+    });
+  })();
+
+  </script>
+</dom-module>

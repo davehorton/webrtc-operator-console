@@ -1,0 +1,197 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="../bower_components/app-storage/app-indexeddb-mirror/app-indexeddb-mirror.html">
+<link rel="import" href="../bower_components/polymerfire/polymerfire.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/paper-dialog/paper-dialog.html">
+<link rel="import" href="../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../bower_components/paper-fab/paper-fab.html">
+<link rel="import" href="../bower_components/neon-animation/animations/scale-up-animation.html">
+<link rel="import" href="../bower_components/neon-animation/animations/fade-out-animation.html">
+<link rel="import" href="my-presentity.html">
+
+<dom-module id="my-presence-console">
+  <template>
+    <style is="custom-style" include="iron-flex iron-flex-alignment">
+      :host {
+        display: block;
+      }
+      #add {
+        margin: 0;
+      }
+      .no-ext-to-monitor {
+      	font-size: 20px;
+      	font-weight: bold;
+      	font-style: normal;
+      	font-stretch: normal;
+      	text-align: center;
+      	color: rgba(0, 0, 0, 0.32);
+      }
+
+      .no-ext-to-monitor .secondary {
+      	font-size: 14px;
+      	font-weight: normal;
+      }
+      .first-fab {
+        margin: 20px auto ;
+        --paper-fab-background:  var(--app-primary-color);
+      }
+
+      my-presentity {
+        margin: 12px 0;
+      }
+
+      #addExtension  {
+        width: 512px;
+        --paper-font-title: {
+          font-size: 16px;
+        	font-weight: normal;
+        	font-style: normal;
+        	font-stretch: normal;
+        	letter-spacing: 0.6px;
+        	color: rgba(0, 0, 0, 0.72);
+        }
+        --paper-dialog-button-color: var(--app-primary-color);
+      }
+    </style>
+
+    <firebase-query
+        id="presenceQuery"
+        app-name="wsdemo"
+        path="{{presencePath}}"
+        data="{{presentities}}">
+    </firebase-query>
+
+<!--
+    <app-indexeddb-mirror
+      session="[[user.uid]]"
+      key="presence"
+      data="{{_presentities}}"
+      log="true"
+      persisted-data="{{presentities}}">
+    </app-indexeddb-mirror>
+-->
+
+    <template is="dom-if" if="{{_hasPresentities}}" restamp="true">
+      <div class="presence-list">
+        <template is="dom-repeat" items="[[presentities]]" as="presentity">
+          <my-presentity on-delete-presentity="_onDelete"
+              id$="[[presentity.$key]]"
+              presentity="[[presentity]]"
+              online="[[online]]"
+              console-state={{consoleState}}
+              sip-ua="[[sipUa]]">
+          </my-presentity>
+        </template>
+      </div>
+      <paper-fab class="first-fab" icon="add" on-tap="add"></paper-fab>
+    </template>
+    <template is="dom-if" if="{{!_hasPresentities}}" restamp="true">
+      <div class="layout vertical center">
+        <img src="/images/binocs.png">
+      </div>
+      <div class="no-ext-to-monitor">
+        No extensions are being monitored!
+        <div class="secondary">
+          Add your first one
+        </div>
+      </div>
+      <paper-fab class="first-fab" icon="add" on-tap="add"></paper-fab>
+    </template>
+
+    <paper-dialog id="addExtension" entry-animation="scale-up-animation" exit-animation="fade-out-animation">
+      <h2>Add new extension</h2>
+      <paper-input autofocus required label="Voip device id" value={{_extId}}></paper-input>
+      <paper-input label="Extension #" required value={{_extLabel}}></paper-input>
+      <paper-input label="Person/dept" value={{_extDescr}}></paper-input>
+      <div class="buttons">
+        <paper-button dialog-confirm disabled="{{!_hasValidNewExtension(_extId, _extLabel)}}" on-tap="_doAdd">Add extension</paper-button>
+      </div>
+    </paper-dialog>
+
+  </template>
+  <script>
+
+    Polymer({
+      is: 'my-presence-console',
+
+      properties: {
+        user: {
+          type: Object
+        },
+        sipUa: {
+          type: Object,
+          value: null
+        },
+        online: {
+          type: Boolean
+        },
+        consoleState: {
+          type: String
+        },
+        presencePath: {
+          type: String,
+          computed: '_computePresencePath(user)'
+        },
+        presentities: {
+          type: Object,
+          notify: true
+        },
+        _hasPresentities: {
+          type: Boolean,
+          computed: '_computeHasPresentities(presentities.*)'
+        },
+        _presentities: {
+          type: Object
+        },
+        _extId: {
+          type: String,
+          value: ''
+        },
+        _extLabel: {
+          type: String,
+          value: ''
+        },
+        _extName: {
+          type: String,
+          value: ''
+        },
+        newItem: {
+          type: Object
+        }
+      },
+
+      add: function(e) {
+        this.newItem = {} ;
+        this.$.addExtension.open() ;
+      },
+      _doAdd: function(e) {
+        this.$.presenceQuery.ref.child(this._extId).set({
+          deviceId: this._extId,
+          label: this._extLabel,
+          descr: this._extDescr
+        });
+      },
+
+      _onDelete: function(e) {
+        var path = this.presencePath + "/" + e.detail.presentity.$key ;
+        this.$.presenceQuery.setStoredValue(path, null) ;
+      },
+
+      _computePresencePath: function(user) {
+        var path =  !user ? null: ('users/' + user.uid + '/sip/presence');
+        console.log('my-presence-console: path %s', path) ;
+        return path ;
+      },
+      _computeHasPresentities: function(changeRecord) {
+        return this.presentities && this.presentities.length > 0  ;
+      },
+      _hasValidNewExtension: function(_extId, _extLabel) {
+        var ret = /^\d+$/.test(_extId) && _extLabel.length > 0 ;
+        console.log('id: %s, label: %s, ret: %s', _extId, _extLabel, ret);
+        return ret ;
+      }
+    });
+  </script>
+</dom-module>

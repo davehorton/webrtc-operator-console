@@ -1,0 +1,95 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+
+<dom-module id="my-line-manager">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+      ::content my-line {
+        margin: 12px 0;
+      }
+    </style>
+
+    <content id="myContent"></content>
+
+  </template>
+  <script>
+    Polymer({
+      is: 'my-line-manager',
+
+      properties: {
+        sipUa: {
+          type: Object,
+          value: null
+        },
+        online: {
+          type: Boolean
+        },
+        lines: {
+          type: Array
+        }
+      },
+
+      attached: function() {
+        this.set('lines', this.getEffectiveChildren() ) ;
+        this.lines.forEach( function(line) {
+          this.listen(line, 'state-change', 'onLineStateChange');
+        }, this) ;
+      },
+      detached: function() {
+        this.lines.forEach( function(line) {
+          this.unlisten(line, 'state-change', 'onLineStateChange');
+        }, this) ;
+        this.set('lines', []) ;
+      },
+
+      assign: function(session) {
+        var assigned = false ;
+        for( var i = 0; !assigned && i < this.lines.length; i++ ) {
+          if( !this.lines[i].occupied ) {
+            this.lines[i].assign(session) ;
+            assigned = true ;
+          }
+        }
+        if( !assigned ) {
+          session.reject({statusCode: 486});
+        }
+      },
+      dial: function(tel) {
+        for( var i = 0; i < this.lines.length; i++ ) {
+          if( !this.lines[i].occupied ) {
+            this.lines[i].dial( tel ) ;
+            return true;
+          }
+        }
+        return false ;
+      },
+      pickupCall: function(obj) {
+        for( var i = 0; i < this.lines.length; i++ ) {
+          if( !this.lines[i].occupied ) {
+            this.lines[i].pickupCall( obj ) ;
+            return true;
+          }
+        }
+        return false ;
+      },
+      mergeCalls: function() {
+        this.lines[0].session.refer( this.lines[1].session ) ;
+      },
+      onLineStateChange: function(e) {
+        console.log('line %d changed state: %s => %s', e.detail.line, e.detail.oldState, e.detail.newState) ;
+        var lines = [];
+        for( var i = 0; i < this.lines.length; i++ ) {
+          lines.push({
+            callState: this.lines[i].callState,
+            mediaState: this.lines[i].mediaState
+          });
+        }
+        this.fire('lines-stage-change', { lines: lines }) ;
+      }
+
+    });
+  </script>
+</dom-module>

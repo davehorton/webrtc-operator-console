@@ -1,0 +1,294 @@
+
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
+<link rel="import" href="../bower_components/paper-fab/paper-fab.html">
+<link rel="import" href="my-line-manager.html">
+<link rel="import" href="my-line.html">
+<link rel="import" href="my-presence-console.html">
+<link rel="import" href="my-tone-generator.html">
+<link rel="import" href="shared-styles.html">
+
+<dom-module id="my-console">
+
+  <template>
+
+    <style is="custom" include="iron-flex iron-flex-alignment">
+      :host {
+        display: block;
+      }
+      .line-container {
+        background-color: #f7f7f7;
+        padding-bottom: 32px;
+      }
+      .presence-container {
+        background-color: ##bcb9b9;
+      }
+      .operator-lines {
+      	/* width: 108px; */
+        width: 640px;
+      	height: 28px;
+      	font-family: Lato;
+      	font-size: 16px;
+      	font-weight: bold;
+      	font-style: normal;
+      	font-stretch: normal;
+      	line-height: 1.75;
+      	text-align: left;
+        margin: 24px 0 0 0 ;
+      	color: rgba(0, 0, 0, 0.72);
+      }
+      my-line-manager{
+        width: 760px;
+        padding-left: 60px;
+      }
+      my-presence-console {
+        margin: 12px 0 0 0 ;
+        width: 755px;
+        padding-right: 45px
+      }
+      .line {
+        width: 100%;
+        border: solid 1px rgba(0, 0, 0, 0.12);
+      }
+      .merge-calls {
+        opacity: 0;
+      	width: 40px;
+      	height: 84px;
+        border-top: dashed 2px #04aaa8;
+        border-right: dashed 2px #04aaa8;
+        border-bottom: dashed 2px #04aaa8;
+      }
+      paper-fab[icon=call-merge] {
+        opacity: 0;
+        margin-left: 14px;
+        margin-top: 14px;
+        top: -7px;
+        right: 42px;
+        z-index: 99;
+        --paper-fab-background:  var(--app-primary-color);
+      }
+      paper-fab[icon=call-merge].ready {
+        opacity: 1;
+      }
+      .merge-calls.ready {
+        opacity: 0.56;
+      }
+    </style>
+
+    <my-tone-generator id="ringer" frequency1="440" frequency2="480"></my-tone-generator>
+
+    <div class="line-container layout vertical">
+      <div class="layout horizontal center-justified">
+        <div class="operator-lines">Operator Lines</div>
+      </div>
+
+      <div class="layout horizontal center-justified center">
+        <my-line-manager id="lineManager" sip-ua="{{ua}}" online="{{online}}" on-lines-stage-change="_onStateChange">
+          <my-line line="1" sip-ua="{{ua}}" online="{{online}}" presentities={{presentities}}></my-line>
+          <my-line line="2" sip-ua="{{ua}}" online="{{online}}" presentities={{presentities}}></my-line>
+        </my-line-manager>
+        <div class="merge-calls" class$="{{_computeDivMergeClasslist(mergeable)}}"></div>
+        <paper-fab icon="call-merge" class$="{{_computeFabMergeClasslist(mergeable)}}" on-tap="_mergeCalls"></paper-fab>
+      </div>
+    </div>
+
+    <div class="line"></div>
+
+    <div class="presence-container layout vertical">
+      <div class="layout horizontal center-justified">
+        <div class="operator-lines">Monitored extensions</div>
+      </div>
+      <div class="layout horizontal center-justified">
+        <my-presence-console user="{{user}}" sip-ua={{ua}} online={{online}} console-state="{{state}}"
+          presentities={{presentities}} on-speed-dial="_onSpeedDial" on-call-pickup="_onCallPickup">
+        </my-presence-console>
+      </div>
+    </div>
+
+  </template>
+
+  <script>
+
+  (function() {
+
+    const UNKNOWN_USER = 'unknown-user';
+    const ZERO_STATE = 'zero-state' ;
+    const REGISTERING = 'registering' ;
+    const REGISTERED = 'registered' ;
+
+    Polymer({
+
+      is: 'my-console',
+
+      properties: {
+        sipCredentials: {
+          type: Object,
+          value: {},
+          observer: '_credentialsChanged'
+        },
+        ua: {
+          type: Object,
+          value: null
+        },
+        online: {
+          type: Boolean,
+          value: false
+        },
+        state: {
+          type: String,
+          value: ZERO_STATE
+        },
+        presentities: {
+          type: Object
+        },
+        user: Object,
+        mergeable: {
+          type: Boolean,
+          value: false,
+          notify: true
+        }
+      },
+
+      register: function() {
+        if( REGISTERED === this.state ) {
+          this.setState( ZERO_STATE ) ;
+        }
+        setTimeout( function() {
+          this.setState( REGISTERING ) ;
+        }.bind(this), 600) ;
+      },
+      unregister: function() {
+        if( REGISTERED === this.state ) {
+          this.setState( ZERO_STATE ) ;
+        }
+      },
+      _mergeCalls: function(e) {
+        this.$.lineManager.mergeCalls() ;
+      },
+      _credentialsChanged: function(changeRecord) {
+        console.log('credentials changed: %s', JSON.stringify(changeRecord)) ;
+        if( this.state === ZERO_STATE ) {
+          this.setState( Object.keys(this.sipCredentials).length === 3 ? REGISTERING : ZERO_STATE);
+        }
+      },
+      _onStateChange: function(e) {
+        console.log('my-console: state change: %s', JSON.stringify(e.detail));
+        var lines = e.detail.lines ;
+        if( lines[0].callState === 'active' && lines[1].callState === 'active') {
+          this.mergeable = true ;
+        }
+        else {
+          this.mergeable = false ;
+        }
+
+        if( (lines[0].callState === 'ringing' && lines[1].callState === 'idle') ||
+            (lines[1].callState === 'ringing' && lines[0].callState === 'idle') ) {
+              this.$.ringer.startRinging() ;
+        }
+        else if( this.$.ringer.isActive ) {
+          this.$.ringer.stopRinging() ;
+        }
+      },
+      _computeDivMergeClasslist: function(mergeable) {
+        return mergeable ? 'ready merge-calls': 'merge-calls';
+      },
+      _computeFabMergeClasslist: function(mergeable) {
+        return mergeable ? 'ready': '';
+      },
+      _createUa: function() {
+        this._disposeUa() ;
+        this.ua = new SIP.UA({
+          uri: this.sipCredentials.username + '@' + this.sipCredentials.domain,
+          authorizationUser: this.sipCredentials.username,
+          password: this.sipCredentials.password,
+          wsServers: 'wss://srf-qa-01.drachtio.org:4433',
+          register: true,
+          displayName: 'Dave H',
+          userAgentString: 'Daveh webrtc client',
+          log: {
+            level: 'debug'
+          },
+          traceSip: true
+        }) ;
+        this.ua.on('connected', this._onConnected.bind(this)) ;
+        this.ua.on('disconnected', this._onDisconnected.bind(this)) ;
+        this.ua.on('registered', this._onRegistered.bind(this)) ;
+        this.ua.on('unregistered', this._onUnregistered.bind(this)) ;
+        this.ua.on('registrationFailed', this._onRegistrationFailed.bind(this)) ;
+        this.ua.on('invite', this._onInvite.bind(this)) ;
+        this.ua.start() ;
+      },
+      _disposeUa: function() {
+        if( this.ua && this.ua.isConnected() ) {
+          this.ua.stop() ;
+        }
+        this.ua = null;
+      },
+      _onConnected: function() {
+        console.log('websocket connection established');
+      },
+      _onDisconnected: function() {
+        console.log('websocket connection dropped');
+        this.online = false ;
+      },
+      _onRegistered: function() {
+        console.log('registered successfully');
+        if( this.state === REGISTERING ) {
+          this.setState( REGISTERED ) ;
+        }
+        this.online = true ;
+      },
+      _onUnregistered: function() {
+        console.log('unregistered');
+        this.setState(ZERO_STATE);
+        this.online = false ;
+      },
+      _onRegistrationFailed: function(cause, response) {
+        console.log('registration failed: %s: %s', cause, response);
+        this.status = 'registration failed' ;
+      },
+      _onInvite: function(session) {
+        console.log('incoming call from %s', JSON.stringify(session.remoteIdentity));
+        this.$.lineManager.assign( session ) ;
+      },
+      _onSpeedDial: function(e) {
+        console.log('speed dial %s', JSON.stringify(e.detail));
+        this.$.lineManager.dial( e.detail.presentity.label ) ;
+      },
+      _onCallPickup: function(e) {
+        console.log('call pickup: %s', JSON.stringify(e.detail)) ;
+        this.$.lineManager.pickupCall( e.detail ) ;
+      },
+      setState: function(state, session) {
+        switch( state ) {
+          case ZERO_STATE:
+            this._disposeUa();
+            break ;
+
+          case REGISTERING:
+            this._createUa() ;
+            this.status = 'registering..';
+
+          case REGISTERED:
+            this.session = null ;
+            this.status = '';
+            break ;
+        }
+        this.state = state ;
+      },
+    });
+  })() ;
+
+  </script>
+
+</dom-module>

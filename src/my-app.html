@@ -1,0 +1,284 @@
+<!--
+@license
+Copyright (c) 2016 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+<link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/app-route/app-location.html">
+<link rel="import" href="../bower_components/app-route/app-route.html">
+<link rel="import" href="../bower_components/app-layout/app-drawer-layout/app-drawer-layout.html">
+<link rel="import" href="../bower_components/app-layout/app-drawer/app-drawer.html">
+<link rel="import" href="../bower_components/app-layout/app-scroll-effects/app-scroll-effects.html">
+<link rel="import" href="../bower_components/app-layout/app-header/app-header.html">
+<link rel="import" href="../bower_components/app-layout/app-header-layout/app-header-layout.html">
+<link rel="import" href="../bower_components/app-layout/app-toolbar/app-toolbar.html">
+<link rel="import" href="../bower_components/paper-icon-button/paper-icon-button.html">
+<link rel="import" href="../bower_components/paper-item/paper-icon-item.html">
+<link rel="import" href="../bower_components/paper-dialog/paper-dialog.html">
+<link rel="import" href="../bower_components/paper-listbox/paper-listbox.html">
+<link rel="import" href="../bower_components/iron-icon/iron-icon.html">
+<link rel="import" href="../bower_components/iron-pages/iron-pages.html">
+<link rel="import" href="../bower_components/iron-selector/iron-selector.html">
+<link rel="import" href="../bower_components/polymerfire/polymerfire.html">
+<link rel="import" href="my-icons.html">
+<link rel="import" href="my-auth.html">
+<link rel="import" href="my-console.html">
+<link rel="import" href="shared-styles.html">
+
+
+
+<script src="../bower_components/sip.js/dist/sip.js"></script>
+
+<dom-module id="my-app">
+
+  <template>
+
+    <style include="shared-styles">
+
+      :host {
+        display: block;
+        --app-primary-color: #04aaa8;
+        --app-secondary-color: rgba(0, 0, 0, 0.72);
+        --app-warning-color: #fd3131;
+      }
+
+      app-header {
+        background-color: var(--app-primary-color);
+        color: #fff;
+      }
+      app-header paper-icon-button {
+        --paper-icon-button-ink-color: white;
+      }
+      app-toolbar {
+        padding: 0 24px;
+      }
+      iron-pages {
+        /* width: 640px; do this down in console now */
+        margin: 0 auto;
+      }
+
+
+      .drawer-list {
+        margin: 0 20px;
+      }
+      .drawer-list a {
+        display: block;
+        padding: 0 16px;
+        line-height: 40px;
+        text-decoration: none;
+        color: var(--app-secondary-color);
+      }
+      .drawer-list a.iron-selected {
+        color: black;
+        font-weight: bold;
+      }
+      .drawer-list a.subroute {
+        padding-left: 32px;
+      }
+      #sipCredentials  {
+        width: 512px;
+        --paper-font-title: {
+          font-size: 16px;
+        	font-weight: normal;
+        	font-style: normal;
+        	font-stretch: normal;
+        	letter-spacing: 0.6px;
+        	color: rgba(0, 0, 0, 0.72);
+        }
+        --paper-dialog-button-color: var(--app-primary-color);
+      }
+      #sipCredentials .reg-error.hide {
+        opacity: 0;
+      }
+      #sipCredentials .reg-error {
+        min-height: 18px;
+        opacity: 1;
+        color: var(--app-warning-color);
+        font-family: Lato;
+      	font-size: 14px;
+      	font-weight: normal;
+      	font-style: normal;
+      	font-stretch: normal;
+      	line-height: 1.29;
+      	text-align: left;
+      }
+
+
+    </style>
+
+    <my-auth id="auth" user="{{user}}"></my-auth>
+
+    <firebase-document
+      id="credentials"
+      app-name="wsdemo"
+      path="[[sipCredentialsPath]]/credentials"
+      data="{{sipCredentials}}">
+    </firebase-document>
+
+    <app-drawer-layout fullbleed>
+
+      <!-- Main content -->
+      <app-header-layout has-scrolling-region>
+
+        <app-header condenses reveals effects="waterfall">
+          <app-toolbar>
+            <paper-icon-button icon="menu" drawer-toggle></paper-icon-button>
+            <div main-title>WebRTC Operator Console</div>
+            <paper-icon-button icon="more-vert" on-tap="showSettings"></paper-icon-button>
+          </app-toolbar>
+        </app-header>
+
+        <my-console id="console" sip-credentials="{{sipCredentials}}"  user="{{user}}"></my-console>
+
+      </app-header-layout>
+
+    </app-drawer-layout>
+
+    <paper-dialog id="settingsMenu" no-overlap horizontal-align="right" vertical-align="top"
+      entry-animation="scale-up-animation" exit-animation="fade-out-animation">
+      <paper-listbox>
+        <paper-icon-item class="settings-items" on-tap="showCreds">
+          <iron-icon icon="settings" item-icon></iron-icon>
+          Settings
+        </paper-icon-item>
+        <paper-icon-item class="settings-items" on-tap="signout">
+          <iron-icon icon="input" item-icon></iron-icon>
+          Sign out
+        </paper-icon-item>
+      </paper-listbox>
+    </paper-dialog>
+
+    <paper-dialog id="sipCredentials" entry-animation="scale-up-animation" exit-animation="fade-out-animation">
+      <h2>SIP Account</h2>
+      <paper-input autofocus required label="Username" value={{newCreds.username}}></paper-input>
+      <paper-input label="Password" required type="password" value={{newCreds.password}}></paper-input>
+      <paper-input label="Domain" required value={{newCreds.domain}}></paper-input>
+      <div class$="{{_getSipCredsErrorClass(_regStatus)}}">{{_regError}}</div>
+      <div class="buttons">
+        <paper-button disabled="{{!_hasValidCredentials(newCreds.username, newCreds.password, newCreds.domain)}}"
+          on-tap="_doAddAccount">Save</paper-button>
+      </div>
+    </paper-dialog>
+
+  </template>
+
+  <script>
+
+    Polymer({
+
+      is: 'my-app',
+
+      properties: {
+
+        user: {
+          type: Object,
+          observer: '_userChanged'
+        },
+        sipCredentialsPath: {
+          computed: '_computeSipCredentialsPath(user)'
+        },
+        sipCredentials: {
+          type: Object,
+          value: {},
+        },
+        newCreds: {
+          type: Object,
+          value: {}
+        },
+        _regStatus: {
+          type: Boolean,
+          value: true
+        },
+        _regError: {
+          type: String,
+          value: ''
+        }
+      },
+
+      _getSipCredsErrorClass: function(regStatus) {
+        return regStatus ? 'reg-error hide': 'reg-error'
+      },
+      _computeSipCredentialsPath: function(user) {
+        return !user ? null: ('users/' + user.uid + '/sip');
+      },
+      _userChanged: function() {
+        console.log('user changed: ', JSON.stringify(this.user)) ;
+      },
+      _hasValidCredentials: function(username, password, domain) {
+        return username && username.length && password && password.length && domain && domain.length;
+      },
+      _doAddAccount: function(e) {
+        console.log('time to test credentials: %s', JSON.stringify(this.newCreds));
+        this._regStatus = true ;
+        var ua = new SIP.UA({
+          uri: this.newCreds.username + '@' + this.newCreds.domain,
+          authorizationUser: this.newCreds.username,
+          password: this.newCreds.password,
+          wsServers: 'wss://srf-qa-01.drachtio.org:4433',
+          register: true,
+          displayName: 'Test client',
+          userAgentString: 'Daveh webrtc client',
+          log: {
+            level: 'debug'
+          },
+          traceSip: true
+        }) ;
+
+        ua
+        .once('registered', function() {      //success
+          this.sipCredentials = this.newCreds ;
+          newCreds = {};
+
+          this.$.credentials.save(this.sipCredentialsPath, 'credentials').then( function() {
+            console.log('saved credentials, re-registering');
+            this.$.console.register() ;
+          }.bind(this));
+
+          this.$.sipCredentials.close() ;
+          ua.unregister() ;
+        }.bind(this))
+        .once('registrationFailed', function(cause) {     // failure
+          this._regStatus = false ;
+          if( !cause ) {
+            this._regError = 'Registration timed out: check to make sure domain is correct and try again' ;
+          }
+          else if( 401 === cause.status_code || 403 === cause.status_code ) {
+            this._regError = 'Registration failed: check credentials and try again'
+          }
+          else if( 503 === cause.status_code ) {
+            this._regError = 'Edge proxy is down or not responding' ;
+          }
+          else {
+            this._regError = 'Error registering: ' + cause.statusCode ;
+          }
+        }.bind(this)) ;
+      },
+      showSettings: function(e) {
+        this.$.settingsMenu.positionTarget = e.target ;
+        this.$.settingsMenu.open() ;
+      },
+      showCreds: function(e) {
+        this.$.settingsMenu.close() ;
+        this._regStatus = true;
+
+        this.newCreds = {
+          username: this.sipCredentials.username,
+          password: this.sipCredentials.password,
+          domain: this.sipCredentials.domain
+        };
+        this.$.sipCredentials.open() ;
+      },
+      signout: function(e) {
+        this.$.console.unregister() ;
+        this.$.auth.signOut() ;
+      },
+
+    });
+
+  </script>
+
+</dom-module>
