@@ -340,7 +340,7 @@
         if( !!this.session || this.callState !== CS_IDLE ) {
           throw new Error('dial is not valid in state ' + this.callState);
         }
-        this.session = this.sipUa.invite( typeof tel === 'String' ? tel : this.dialedDigits, {
+        this.session = this.sipUa.invite( typeof tel === 'string' ? tel : this.dialedDigits, {
           media: {
             constraints: {
               audio: true,
