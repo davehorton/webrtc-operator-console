@@ -160,14 +160,24 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       },
 
       register: function() {
+        console.log('my-console#register');
         if( REGISTERED === this.state ) {
-          this.setState( ZERO_STATE ) ;
+          console.log('my-console#register: already registered, so first unregister..');
+
+          // to avoid race conditions, remove all existing listeners, unregister, and only when complete re-register
+          ['connected','disconnected','registered','unregistered'].forEach( function(event) {this.ua.removeAllListeners(event);}, this ) ;
+          this.ua.stop() ;
+          this.ua.once('disconnected', function() {
+            console.log('successfully unregistered, now register');
+            this.setState( REGISTERING ) ;
+          }.bind(this));
         }
-        setTimeout( function() {
+        else {
           this.setState( REGISTERING ) ;
-        }.bind(this), 600) ;
+        }
       },
       unregister: function() {
+        console.log('my-console#register');
         if( REGISTERED === this.state ) {
           this.setState( ZERO_STATE ) ;
         }
@@ -216,9 +226,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           displayName: 'Dave H',
           userAgentString: 'Daveh webrtc client',
           log: {
-            level: 'debug'
+            level: 'log'  // debug, log, warn, error
           },
-          traceSip: true
+          traceSip: false
         }) ;
         this.ua.on('connected', this._onConnected.bind(this)) ;
         this.ua.on('disconnected', this._onDisconnected.bind(this)) ;
@@ -240,21 +250,33 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       _onDisconnected: function() {
         console.log('websocket connection dropped');
         this.online = false ;
+
+        // try to reconnect
+        //setTimeout( this._createUa.bind( this ), 1000 ) ;
       },
       _onRegistered: function() {
         console.log('registered successfully');
         if( this.state === REGISTERING ) {
-          this.setState( REGISTERED ) ;
+          /*
+          if( !this.ua.isConnected()) {
+            console.error('registered but not connected...not going online');
+          }
+          else {
+          */
+            this.setState( REGISTERED ) ;
+            this.online = true ;
+
+          /* } */
         }
-        this.online = true ;
       },
       _onUnregistered: function() {
         console.log('unregistered');
-        this.setState(ZERO_STATE);
         this.online = false ;
+        this.setState(ZERO_STATE);
       },
       _onRegistrationFailed: function(cause, response) {
         console.log('registration failed: %s: %s', cause, response);
+        this.online = false ;
         this.status = 'registration failed' ;
       },
       _onInvite: function(session) {

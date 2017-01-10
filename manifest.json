@@ -1,6 +1,6 @@
 {
-  "name": "WebRTC Demo",
-  "short_name": "WebRTC Demo",
+  "name": "WebRTC operator console",
+  "short_name": "WebRTC console",
   "start_url": "/?homescreen=1",
   "display": "standalone",
   "theme_color": "#3f51b5",

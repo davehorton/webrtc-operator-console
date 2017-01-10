@@ -211,6 +211,7 @@
       },
 
       _onlineChanged: function(newValue, oldValue) {
+        console.log('%s: online changed to %s', this.presentity.deviceId, newValue);
         if( !oldValue && newValue ) {
           console.log('time to start subscribing for %s', this.presentity.deviceId) ;
           this.subscribe() ;
@@ -276,14 +277,18 @@
       },
       subscribe: function() {
         if( SS_SUBSCRIBED === this.subscribeState) {
-          throw new Error('already subscribed');
+          console.log('my-presentity#subscribed: %s already subscribed', this.presentity.deviceId);
+          return;
         }
-        this.subscription = this.sipUa.subscribe( this.presentity.deviceId + '@' + this.presentity.domain, 'dialog') ;
+        console.log('subscribing to %s', this.presentity.deviceId) ;
+        this.subscription = this.sipUa.subscribe( this.presentity.deviceId + '@' + this.presentity.domain, 'dialog', {expires: 3600}) ;
         if( !this.subscription ) {
-          console.log('subscription failed');
+          console.log('subscription failed: %s', this.presentity.deviceId);
         }
         else {
+          console.log('subscription succeeded: %s', this.presentity.deviceId);
           this.subscription.on('notify', this._onNotify.bind( this) );
+          this.setSubscribeState( SS_SUBSCRIBED );
         }
       },
 
@@ -307,7 +312,7 @@
 
             // only interested in dialog
             if( event.parsed.event === 'dialog') {
-              var arr = /^<dialog\s*id=\"(.*?)\"\s*direction=\"(.*?)\"/m.exec( body ) ;
+              var arr = /<dialog\s*id=\"(.*?)\".*direction=\"(.*?)\"/m.exec( body ) ;
               if( arr && arr.length === 3 ) {
                 var dialog = arr[1] ;
                 var direction = arr[2] ;
@@ -316,14 +321,14 @@
                 var remotePartyNumber
 
 
-                arr = /^<state>(.*?)<\/state>/m.exec( body ) ;
+                arr = /<state>(.*?)<\/state>/m.exec( body ) ;
                 if( arr && arr.length == 2 ) {
                   state = arr[1] ;
                 }
                 console.log('dialog %s, direction %s, state: %s', dialog, direction, state);
 
-                //TODO: get remote party name and number, create or update saved dialog
-                arr = /<remote>.*?\n<identity\s+display=\"(.*?)\".*?>sip:(.*?)@.*<\/identity>/.exec( body ) ;
+                // get remote party name and number, create or update saved dialog
+                arr = /<remote>[.|\n|\s]*<identity\s+display=\"(.*?)\".*?>sip:(.*?)@.*<\/identity>/.exec( body ) ;
                 if( arr && arr.length == 3 ) {
                   remotePartyId = arr[1] ;
                   if( arr[2] !== arr[2] ) {
@@ -331,7 +336,7 @@
                   }
                 }
 
-                if( state === 'early' || (state === 'confirmed' && this.dialogState === DS_IDLE)) {
+                if( state === 'early' || (state === 'confirmed' && this.dialogState === DS_IDLE) ) {
                   this.dialog = {
                     id: dialog,
                     state: state,
@@ -339,7 +344,12 @@
                     remotePartyId: remotePartyId,
                     remotePartyNumber: remotePartyNumber || ''
                   } ;
-                  this.setDialogState( 'recipient' === direction ? DS_RINGING: DS_DIALING ) ;
+                  if( state === 'confirmed' ) {
+                    this.setDialogState( DS_ACTIVE );
+                  }
+                  else {
+                    this.setDialogState( 'recipient' === direction ? DS_RINGING: DS_DIALING ) ;
+                  }
                 }
                 else if( state === 'terminated') {
                   this.setDialogState( DS_IDLE ) ;
@@ -356,7 +366,13 @@
         console.log('presentity changed: %s => %s', JSON.stringify(oldValue), JSON.stringify(newValue));
       },
       _consoleStateChanged: function(newValue, oldValue) {
-        console.log('console state changed: %s => %s', oldValue, newValue);
+        console.log('%s: console state changed: %s => %s, my state: %s', this.presentity.deviceId, oldValue, newValue, this.subscribeState);
+        if( 'registering' === newValue && 'registered' === oldValue ) {
+          this.setSubscribeState( SS_NONE );
+        }
+        else if( SS_NONE === this.subscribeState && 'registered' === newValue) {
+          this.subscribe() ;
+        }
       },
       _startCallTimer: function() {
         this.dialog.connectTime = new Date() ;
@@ -379,7 +395,7 @@
       },
 
       setSubscribeState: function(newState) {
-        console.log('setSubscribeState: %s => %s', this.subscribeState, newState) ;
+        console.log('%s: setSubscribeState: %s => %s', this.presentity.deviceId, this.subscribeState, newState) ;
         var oldState = this.subscribeState ;
         switch(newState) {
           case SS_NONE:

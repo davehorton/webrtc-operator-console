@@ -1,17 +1,16 @@
 {
   "entrypoint": "index.html",
   "shell": "src/my-app.html",
-  "fragments": [
-    "src/my-settings.html",
-    "src/my-console.html",
-    "src/my-view404.html"
-  ],
   "sourceGlobs": [
    "src/**/*",
    "images/**/*",
    "bower.json"
   ],
-  "includeDependencies": [
-    "bower_components/webcomponentsjs/webcomponents-lite.min.js"
+  "extraDependencies": [
+    "bower_components/webcomponentsjs/webcomponents-lite.min.js",
+    "manifest.json",
+    "service-worker.js",
+    "sw-precache-config.js",
+    "bower_components/sip.js/dist/sip.min.js"
   ]
 }

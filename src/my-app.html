@@ -8,6 +8,7 @@ Code distributed by Google as part of the polymer project is also
 subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 -->
 <link rel="import" href="../bower_components/polymer/polymer.html">
+<link rel="import" href="../bower_components/iron-flex-layout/iron-flex-layout-classes.html">
 <link rel="import" href="../bower_components/app-route/app-location.html">
 <link rel="import" href="../bower_components/app-route/app-route.html">
 <link rel="import" href="../bower_components/app-layout/app-drawer-layout/app-drawer-layout.html">
@@ -25,19 +26,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 <link rel="import" href="../bower_components/iron-selector/iron-selector.html">
 <link rel="import" href="../bower_components/polymerfire/polymerfire.html">
 <link rel="import" href="my-icons.html">
-<link rel="import" href="my-auth.html">
 <link rel="import" href="my-console.html">
 <link rel="import" href="shared-styles.html">
-
-
-
-<script src="../bower_components/sip.js/dist/sip.js"></script>
 
 <dom-module id="my-app">
 
   <template>
 
-    <style include="shared-styles">
+    <style include="shared-styles iron-flex iron-flex-alignment">
 
       :host {
         display: block;
@@ -107,10 +103,106 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       	text-align: left;
       }
 
+      .login-container {
+        width: 100%;
+        height: 100%;
+      	/* background-color: rgba(0, 0, 0, 0.12); */
+        background-color: eeeeee;
+      }
+      .login-container > * {
+        width: 1024px;
+      }
+      .login-container > .title {
+        padding-top: 157px;
+        font-family: Lato;
+      	font-size: 32px;
+      	font-weight: bold;
+      	font-style: normal;
+      	font-stretch: normal;
+      	line-height: 1.12;
+      	text-align: center;
+      	color: #04aaa8;
+      }
+      .login-container > .controls {
+        margin-top: 50px;
+        width: 340px;
+      	height: 320px;
+      	background-color: #ffffff;
+      	box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.24), 0 0 2px 0 rgba(0, 0, 0, 0.12);
+      }
+      .login-container > .controls > .title {
+        margin-top: 50px;
+        margin-bottom: 27px;
+        text-align: center;
+        font-family: Lato;
+      	font-size: 16px;
+      	font-weight: normal;
+      	font-style: normal;
+      	font-stretch: normal;
+      	color: rgba(0, 0, 0, 0.72);
+      }
+      .login-container > .controls .button-bg {
+        cursor: pointer ;
+      	width: 288px;
+      	height: 40px;
+      	border-radius: 2px;
+      	box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.24), 0 0 2px 0 rgba(0, 0, 0, 0.12);
+      }
+      .login-container > .controls .button-bg.facebook {
+        background-color: #3c5a99;
+      }
+      .login-container > .controls .button-bg.twitter {
+        background-color: #1da1f2;
+      }
+      .login-container > .controls .button-bg.google {
+        background-color: #dc4e41;
+      }
+      .login-container > .controls .button-bg {
+        margin-top: 12px;
+      }
+      .login-container > .controls > .btn > .button-bg > * {
+        padding-top: 6px;
+      	height: 17px;
+        margin 0 auto;
+      	font-family: Lato;
+      	font-size: 14px;
+      	font-weight: bold;
+      	font-style: normal;
+      	font-stretch: normal;
+      	letter-spacing: 0.5px;
+      	text-align: center;
+      	color: #ffffff;
+      }
+
+      #notImplemented {
+        font-family: 'Lato','Noto', sans-serif;
+        font-size: 16px;
+      	font-weight: normal;
+      	font-style: normal;
+      	font-stretch: normal;
+      	line-height: 1.75;
+      	text-align: left;
+      	color: rgba(0, 0, 0, 0.72);
+      }
+      #notImplemented p {
+        margin: 10px auto;
+      }
 
     </style>
 
-    <my-auth id="auth" user="{{user}}"></my-auth>
+    <firebase-app
+        name="wsdemo"
+        auth-domain="ws-demo-97a93.firebaseapp.com"
+        database-url="https://ws-demo-97a93.firebaseio.com"
+        api-key="AIzaSyBEYrIzVERG6-KfkepmC4I9RbAFD1u4A18">
+    </firebase-app>
+
+    <firebase-auth
+        id="authenticate"
+        app-name="wsdemo"
+        user="{{user}}"
+        provider="google">
+    </firebase-auth>
 
     <firebase-document
       id="credentials"
@@ -119,24 +211,62 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       data="{{sipCredentials}}">
     </firebase-document>
 
-    <app-drawer-layout fullbleed>
+    <template is="dom-if" if="{{_hasUser(user)}}" restamp="false">
+      <app-drawer-layout fullbleed>
 
-      <!-- Main content -->
-      <app-header-layout has-scrolling-region>
+        <!-- Main content -->
+        <app-header-layout has-scrolling-region>
 
-        <app-header condenses reveals effects="waterfall">
-          <app-toolbar>
-            <paper-icon-button icon="menu" drawer-toggle></paper-icon-button>
-            <div main-title>WebRTC Operator Console</div>
-            <paper-icon-button icon="more-vert" on-tap="showSettings"></paper-icon-button>
-          </app-toolbar>
-        </app-header>
+          <app-header condenses reveals effects="waterfall">
+            <app-toolbar>
+              <paper-icon-button icon="menu" drawer-toggle></paper-icon-button>
+              <div main-title>WebRTC Operator Console</div>
+              <paper-icon-button icon="more-vert" on-tap="showSettings"></paper-icon-button>
+            </app-toolbar>
+          </app-header>
 
-        <my-console id="console" sip-credentials="{{sipCredentials}}"  user="{{user}}"></my-console>
+          <my-console id="console" sip-credentials="{{sipCredentials}}"  user="{{user}}"></my-console>
 
-      </app-header-layout>
+        </app-header-layout>
 
-    </app-drawer-layout>
+      </app-drawer-layout>
+
+    </template>
+
+    <template is="dom-if" if="{{!_hasUser(user)}}" restamp="true">
+
+      <div class="layout vertical center login-container">
+        <div class="title">
+          WebRTC Operator Console
+        </div>
+        <div class="layout vertical controls">
+          <div class="title">
+            Sign in with your favorite account
+          </div>
+          <div class="layout horizontal center-justified btn">
+            <div class="button-bg facebook" on-tap="signinWithFacebook">
+              <div class="connect-with-facebook">
+                Connect with Facebook
+              </div>
+            </div>
+          </div>
+          <div class="layout horizontal center-justified btn">
+            <div class="button-bg twitter" on-tap="signinWithTwitter">
+              <div class="signin-with-twitter">
+                Signin with Twitter
+              </div>
+            </div>
+          </div>
+          <div class="layout horizontal center-justified btn">
+            <div class="button-bg google" on-tap="signinWithGoogle">
+              <div class="signin-with-google">
+                Signin with Google
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <paper-dialog id="settingsMenu" no-overlap horizontal-align="right" vertical-align="top"
       entry-animation="scale-up-animation" exit-animation="fade-out-animation">
@@ -164,6 +294,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       </div>
     </paper-dialog>
 
+    <paper-dialog id="notImplemented" no-overlap horizontal-align="left" vertical-align="top">
+      <p>Sorry dawg...google only for the time being.</p>
+    </paper-dialog>
+
   </template>
 
   <script>
@@ -176,7 +310,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
         user: {
           type: Object,
-          observer: '_userChanged'
+          observer: '_userChanged',
+          notify: true
         },
         sipCredentialsPath: {
           computed: '_computeSipCredentialsPath(user)'
@@ -208,6 +343,14 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
       _userChanged: function() {
         console.log('user changed: ', JSON.stringify(this.user)) ;
       },
+      _hasUser: function(user) {
+        var ret = false ;
+        if( user && user.uid ) {
+          ret = true;
+        } ;
+        console.log('_hasUser? %s',ret) ;
+        return ret;
+      },
       _hasValidCredentials: function(username, password, domain) {
         return username && username.length && password && password.length && domain && domain.length;
       },
@@ -223,9 +366,9 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           displayName: 'Test client',
           userAgentString: 'Daveh webrtc client',
           log: {
-            level: 'debug'
+            level: 'warn'
           },
-          traceSip: true
+          traceSip: false
         }) ;
 
         ua
@@ -235,7 +378,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
 
           this.$.credentials.save(this.sipCredentialsPath, 'credentials').then( function() {
             console.log('saved credentials, re-registering');
-            this.$.console.register() ;
+            this.$$('#console').register() ;
           }.bind(this));
 
           this.$.sipCredentials.close() ;
@@ -272,9 +415,29 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         };
         this.$.sipCredentials.open() ;
       },
+      signinWithGoogle: function(e) {
+        try {
+          this.$.authenticate.signInWithPopup('google');
+        }
+        catch( err ) {
+          console.error('Error!!!: %s', JSON.stringify(err)) ;
+        }
+      },
+      signinWithFacebook: function(e) {
+        this.notimpl(e) ;
+      },
+      signinWithTwitter: function(e) {
+        this.notimpl(e) ;
+      },
+      notimpl: function(e) {
+        console.log('not implemented');
+        this.$.notImplemented.positionTarget = e.target ;
+        this.$.notImplemented.open() ;
+      },
       signout: function(e) {
-        this.$.console.unregister() ;
-        this.$.auth.signOut() ;
+        this.$.settingsMenu.close() ;
+        this.$$('#console').unregister() ;
+        this.$.authenticate.signOut() ;
       },
 
     });

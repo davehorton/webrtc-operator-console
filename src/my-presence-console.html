@@ -101,10 +101,10 @@
     </template>
 
     <paper-dialog id="addExtension" entry-animation="scale-up-animation" exit-animation="fade-out-animation">
-      <h2>Add new extension</h2>
-      <paper-input autofocus required label="Voip device id" value={{_extId}}></paper-input>
-      <paper-input label="Extension #" required value={{_extLabel}}></paper-input>
-      <paper-input label="Person/dept" value={{_extDescr}}></paper-input>
+      <h2>Add new extension to monitor</h2>
+      <paper-input autofocus required label="Sip username to subscribe to" value={{_extId}}></paper-input>
+      <paper-input label="Associated extension/telephone number" required value={{_extLabel}}></paper-input>
+      <paper-input label="Person/dept name" value={{_extDescr}}></paper-input>
       <div class="buttons">
         <paper-button dialog-confirm disabled="{{!_hasValidNewExtension(_extId, _extLabel)}}" on-tap="_doAdd">Add extension</paper-button>
       </div>
