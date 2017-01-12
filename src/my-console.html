@@ -109,8 +109,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         <div class="operator-lines">Monitored extensions</div>
       </div>
       <div class="layout horizontal center-justified">
-        <my-presence-console user="{{user}}" sip-ua={{ua}} online={{online}} console-state="{{state}}"
-          presentities={{presentities}} on-speed-dial="_onSpeedDial" on-call-pickup="_onCallPickup">
+        <my-presence-console user="{{user}}" sip-ua="{{ua}}" online="{{online}}" console-state="{{state}}"
+          presentities="{{presentities}}" sip-credentials="{{sipCredentials}}" on-speed-dial="_onSpeedDial" on-call-pickup="_onCallPickup">
         </my-presence-console>
       </div>
     </div>
@@ -223,12 +223,11 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           password: this.sipCredentials.password,
           wsServers: 'wss://srf-qa-01.drachtio.org:4433',
           register: true,
-          displayName: 'Dave H',
           userAgentString: 'Daveh webrtc client',
           log: {
-            level: 'log'  // debug, log, warn, error
+            level: 'debug'  // debug, log, warn, error
           },
-          traceSip: false
+          traceSip: true
         }) ;
         this.ua.on('connected', this._onConnected.bind(this)) ;
         this.ua.on('disconnected', this._onDisconnected.bind(this)) ;

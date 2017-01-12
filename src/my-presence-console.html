@@ -80,7 +80,8 @@
               id$="[[presentity.$key]]"
               presentity="[[presentity]]"
               online="[[online]]"
-              console-state={{consoleState}}
+              console-state="{{consoleState}}"
+              sip-credentials="[[sipCredentials]]"
               sip-ua="[[sipUa]]">
           </my-presentity>
         </template>
@@ -137,6 +138,9 @@
         presentities: {
           type: Object,
           notify: true
+        },
+        sipCredentials: {
+          type: Object
         },
         _hasPresentities: {
           type: Boolean,
