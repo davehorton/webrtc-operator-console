@@ -126,6 +126,8 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
     const REGISTERING = 'registering' ;
     const REGISTERED = 'registered' ;
 
+    const registerExpires = 3600 ;
+
     Polymer({
 
       is: 'my-console',
@@ -223,6 +225,7 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
           password: this.sipCredentials.password,
           wsServers: 'wss://srf-qa-01.drachtio.org:4433',
           register: true,
+          registerExpires: registerExpires,
           userAgentString: 'Daveh webrtc client',
           log: {
             level: 'debug'  // debug, log, warn, error
@@ -254,24 +257,23 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
         //setTimeout( this._createUa.bind( this ), 1000 ) ;
       },
       _onRegistered: function() {
-        console.log('registered successfully');
+        console.log('registered successfully ');
         if( this.state === REGISTERING ) {
-          /*
-          if( !this.ua.isConnected()) {
-            console.error('registered but not connected...not going online');
-          }
-          else {
-          */
-            this.setState( REGISTERED ) ;
-            this.online = true ;
-
-          /* } */
+          this.setState( REGISTERED ) ;
+          this.session = null ;
+          this.status = '';
+          this.online = true ;
         }
       },
       _onUnregistered: function() {
         console.log('unregistered');
-        this.online = false ;
-        this.setState(ZERO_STATE);
+
+        this.ua.register() ;
+        this._expiresTimer = setTimeout( function() {
+          console.log('really did unregister') ;
+          this.online = false ;
+          this.setState(ZERO_STATE);
+        }.bind(this), 3000) ;
       },
       _onRegistrationFailed: function(cause, response) {
         console.log('registration failed: %s: %s', cause, response);
@@ -301,8 +303,10 @@ subject to an additional IP rights grant found at http://polymer.github.io/PATEN
             this.status = 'registering..';
 
           case REGISTERED:
-            this.session = null ;
-            this.status = '';
+            if( this._expiresTimer ) {
+              clearTimeout( this._expiresTimer ) ;
+              this._expiresTimer = null ;
+            }
             break ;
         }
         this.state = state ;

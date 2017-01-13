@@ -1,7 +1,7 @@
 {
   "entrypoint": "index.html",
   "shell": "src/my-app.html",
-  "sourceGlobs": [
+  "sources": [
    "src/**/*",
    "images/**/*",
    "bower.json"
@@ -11,6 +11,6 @@
     "manifest.json",
     "service-worker.js",
     "sw-precache-config.js",
-    "bower_components/sip.js/dist/sip.min.js"
+    "bower_components/sip.js/dist/sip.js"
   ]
 }

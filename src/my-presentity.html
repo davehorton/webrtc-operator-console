@@ -168,6 +168,8 @@
     const SS_SUBSCRIBED = 'subscribed';
     const SS_ERROR = 'subscribed-failed';
 
+    const subscribeExpires = 3600;
+
     Polymer({
       is: 'my-presentity',
 
@@ -284,7 +286,7 @@
           return;
         }
         console.log('subscribing to %s', this.presentity.deviceId) ;
-        this.subscription = this.sipUa.subscribe( this.presentity.deviceId + '@' + this.sipCredentials.domain, 'dialog', {expires: 3600}) ;
+        this.subscription = this.sipUa.subscribe( this.presentity.deviceId + '@' + this.sipCredentials.domain, 'dialog', {expires: subscribeExpires}) ;
         if( !this.subscription ) {
           console.log('subscription failed: %s', this.presentity.deviceId);
         }
